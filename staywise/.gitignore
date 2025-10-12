@@ -1,0 +1,69 @@
+# ==========================
+# Root
+# ==========================
+node_modules/
+.DS_Store
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+
+# ==========================
+# Backend (Node + TypeScript)
+# ==========================
+/backend/node_modules
+/backend/dist
+/backend/build
+/backend/.env
+/backend/coverage
+/backend/.tsbuildinfo
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Logs
+/backend/logs
+/backend/*.log
+
+# ==========================
+# Frontend (Next.js + Tailwind)
+# ==========================
+/frontend/.next
+/frontend/out
+/frontend/node_modules
+/frontend/.env.local
+/frontend/coverage
+/frontend/.vercel
+/frontend/.turbo
+
+# Production build output
+/frontend/build
+
+# Local next.js cache
+frontend/.next/
+frontend/.turbo/
+
+# ==========================
+# OS & Editor junk
+# ==========================
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*.tmp
+*.temp
+
+# ==========================
+# Misc
+# ==========================
+*.bak
+*.old
+*.cache
