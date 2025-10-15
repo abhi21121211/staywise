@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import Property from '../models/Property';
 
 export const connectDB = async () => {
   try {
@@ -7,6 +8,14 @@ export const connectDB = async () => {
     await mongoose.connect(mongoURI);
     
     console.log('✅ MongoDB connected successfully');
+
+    // Ensure model indexes are created/synced (important for $text search)
+    try {
+      await Property.syncIndexes();
+      console.log('✅ Property indexes synced');
+    } catch (err) {
+      console.warn('⚠️ Failed to sync Property indexes:', err);
+    }
   } catch (error) {
     console.error('❌ MongoDB connection error:', error);
     process.exit(1);

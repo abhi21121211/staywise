@@ -33,9 +33,21 @@ export const authAPI = {
 };
 
 // Property APIs
+export type PaginatedProperties = {
+  data: Property[];
+  total: number;
+  page: number;
+  pages: number;
+};
+
 export const propertyAPI = {
-  getAll: async (): Promise<Property[]> => {
-    const response = await api.get('/properties');
+  getAll: async (params?: Record<string, any>): Promise<PaginatedProperties> => {
+    const response = await api.get('/properties', { params });
+    return response.data;
+  },
+
+  getTypes: async (): Promise<string[]> => {
+    const response = await api.get('/properties/types');
     return response.data;
   },
 
@@ -54,6 +66,11 @@ export const propertyAPI = {
 export const bookingAPI = {
   getMyBookings: async (): Promise<Booking[]> => {
     const response = await api.get('/bookings/my-bookings');
+    return response.data;
+  },
+
+  getByProperty: async (propertyId: string): Promise<Booking[]> => {
+    const response = await api.get(`/bookings/property/${propertyId}`);
     return response.data;
   },
 

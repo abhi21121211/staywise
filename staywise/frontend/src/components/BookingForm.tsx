@@ -1,7 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
+import { addDays, eachDayOfInterval, startOfDay, differenceInCalendarDays } from 'date-fns';
 import { useRouter } from 'next/navigation';
 import { bookingAPI } from '@/lib/api';
 import { Property } from '@/types';
@@ -14,12 +17,53 @@ interface BookingFormProps {
 export default function BookingForm({ property }: BookingFormProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [formData, setFormData] = useState({
-    checkIn: '',
-    checkOut: '',
+  const [formData, setFormData] = useState<{
+    checkIn: Date | null;
+    checkOut: Date | null;
+    guests: number;
+  }>({
+    checkIn: null,
+    checkOut: null,
     guests: 1,
   });
   const [error, setError] = useState('');
+
+  // fetch existing bookings for this property to compute unavailable dates
+  const { data: existingBookings = [] } = useQuery({
+    queryKey: ['property-bookings', property._id],
+    queryFn: () => bookingAPI.getByProperty(property._id),
+  });
+
+  // DEBUG: log fetched bookings and property id
+  console.debug('BookingForm propertyId:', property._id);
+  console.debug('BookingForm existingBookings:', existingBookings);
+
+  // compute unavailable dates (array of Date) from existing bookings
+  // build a set of unavailable day timestamps at start-of-day to avoid timezone mismatches
+  const unavailableSet = new Set<number>();
+  const unavailableDates: Date[] = [];
+  for (const b of existingBookings) {
+    const rawStart = new Date(b.checkIn);
+    const rawEnd = new Date(b.checkOut);
+    // include each day between start and end (exclusive of checkout day)
+    const days = eachDayOfInterval({ start: rawStart, end: addDays(rawEnd, -1) });
+    for (const d of days) {
+      const sd = startOfDay(d);
+      const ts = sd.getTime();
+      if (!unavailableSet.has(ts)) {
+        unavailableSet.add(ts);
+        unavailableDates.push(sd);
+      }
+    }
+  }
+
+  // helper: check if date is unavailable by comparing start-of-day timestamp
+  function isDateUnavailable(date: Date) {
+    return unavailableSet.has(startOfDay(date).getTime());
+  }
+
+  // DEBUG: log unavailable dates for inspection
+  console.debug('BookingForm unavailableDates:', unavailableDates.map((d) => d.toISOString()));
 
   const mutation = useMutation({
     mutationFn: bookingAPI.create,
@@ -46,24 +90,37 @@ export default function BookingForm({ property }: BookingFormProps) {
       return;
     }
 
-    if (new Date(formData.checkOut) <= new Date(formData.checkIn)) {
+      // Ensure selected dates don't overlap existing bookings
+      const selectedStart = startOfDay(formData.checkIn!);
+      const selectedEnd = startOfDay(formData.checkOut!);
+
+      for (const b of existingBookings) {
+  const bStart = startOfDay(new Date(b.checkIn));
+  const bEnd = startOfDay(new Date(b.checkOut));
+        // overlap condition
+        if (!(selectedEnd <= bStart || selectedStart >= bEnd)) {
+          setError('Selected dates overlap an existing booking. Please choose other dates.');
+          return;
+        }
+      }
+
+    if (startOfDay(formData.checkOut!).getTime() <= startOfDay(formData.checkIn!).getTime()) {
       setError('Check-out date must be after check-in date');
       return;
     }
 
     mutation.mutate({
       propertyId: property._id,
-      checkIn: formData.checkIn,
-      checkOut: formData.checkOut,
+      // send ISO dates (UTC) to server
+      checkIn: formData.checkIn!.toISOString(),
+      checkOut: formData.checkOut!.toISOString(),
       guests: formData.guests,
     });
   };
 
   const calculateNights = () => {
     if (!formData.checkIn || !formData.checkOut) return 0;
-    const start = new Date(formData.checkIn);
-    const end = new Date(formData.checkOut);
-    return Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+    return Math.max(0, differenceInCalendarDays(startOfDay(formData.checkOut), startOfDay(formData.checkIn)));
   };
 
   const totalPrice = calculateNights() * property.price;
@@ -83,16 +140,25 @@ export default function BookingForm({ property }: BookingFormProps) {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Check-in
-          </label>
-          <input
-            type="date"
-            required
-            min={new Date().toISOString().split('T')[0]}
-            value={formData.checkIn}
-            onChange={(e) => setFormData({ ...formData, checkIn: e.target.value })}
+          <label className="block text-sm font-medium text-gray-700 mb-2">Check-in</label>
+          <DatePicker
+            selected={formData.checkIn}
+            onChange={(date: Date | null) => {
+              // if new check-in is after current check-out, clear check-out
+              if (formData.checkOut && date) {
+                if (startOfDay(formData.checkOut).getTime() <= startOfDay(date).getTime()) {
+                  setFormData({ ...formData, checkIn: date, checkOut: null });
+                  return;
+                }
+              }
+              setFormData({ ...formData, checkIn: date });
+            }}
+            minDate={new Date()}
+            excludeDates={unavailableDates}
+            filterDate={(d: Date) => !isDateUnavailable(d)}
+            placeholderText="Select check-in"
             className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            dateFormat="yyyy-MM-dd"
           />
         </div>
 
@@ -100,15 +166,33 @@ export default function BookingForm({ property }: BookingFormProps) {
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Check-out
           </label>
-          <input
-            type="date"
-            required
-            min={formData.checkIn || new Date().toISOString().split('T')[0]}
-            value={formData.checkOut}
-            onChange={(e) => setFormData({ ...formData, checkOut: e.target.value })}
+          <DatePicker
+            selected={formData.checkOut}
+            onChange={(date: Date | null) => {
+              setFormData({ ...formData, checkOut: date });
+            }}
+            minDate={formData.checkIn ? addDays(startOfDay(formData.checkIn), 1) : new Date()}
+            excludeDates={unavailableDates}
+            filterDate={(d: Date) => !isDateUnavailable(d)}
+            placeholderText="Select check-out"
             className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            dateFormat="yyyy-MM-dd"
           />
         </div>
+
+        {/* Booked ranges summary */}
+        {existingBookings.length > 0 && (
+          <div className="mt-3 text-sm text-gray-600">
+            <div className="font-medium mb-1">Booked ranges:</div>
+            <ul className="list-disc ml-5">
+              {existingBookings.map((b: any) => (
+                <li key={b._id}>
+                  {new Date(b.checkIn).toISOString().split('T')[0]} — {new Date(b.checkOut).toISOString().split('T')[0]}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">

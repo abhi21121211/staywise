@@ -60,201 +60,169 @@ Create a .env file in the backend directory:
 
 env
 PORT=5000
-MONGODB_URI=mongodb://localhost:27017/staywise
-JWT_SECRET=your_super_secret_jwt_key_change_in_production
-NODE_ENV=development
-Start MongoDB (if not running):
+# StayWise — Property Booking Platform
 
-bash
-# macOS (using Homebrew)
-brew services start mongodb-community
+Lightweight full-stack property booking app built with Next.js, Express, MongoDB and TypeScript.
 
-# Linux
-sudo systemctl start mongod
+## Highlights
 
-# Windows
-net start MongoDB
-Start the backend server:
+- User signup/login (JWT)
+- Browse/filter/search properties (server-side text search)
+- Property detail pages with booking form (calendar shows unavailable dates)
+- Create / view / cancel bookings
+- Admin CRUD for properties and admin view of all bookings
+- Responsive UI (Tailwind CSS)
+- Server-side pagination for properties
 
-bash
-npm run dev
-The API will be available at http://localhost:5000
+---
 
-3. Setup Frontend
-Open a new terminal window:
+## Quickstart (local)
 
-bash
-cd frontend
-npm install
-Create a .env.local file in the frontend directory:
+Prerequisites
 
-env
-NEXT_PUBLIC_API_URL=http://localhost:5000
-Start the frontend development server:
+- Node.js 18+
+- MongoDB 6+ (running locally or accessible via connection string)
 
-bash
-npm run dev
-The application will be available at http://localhost:3000
+1) Clone & install
 
-API Endpoints
-Authentication
-POST /api/auth/signup - Create new user account
-POST /api/auth/login - Login user
-Properties
-GET /api/properties - Get all properties (public)
-GET /api/properties/:id - Get single property (public)
-POST /api/properties - Create property (admin only)
-PUT /api/properties/:id - Update property (admin only)
-DELETE /api/properties/:id - Delete property (admin only)
-Bookings
-GET /api/bookings/my-bookings - Get user's bookings (authenticated)
-GET /api/bookings/all - Get all bookings (admin only)
-POST /api/bookings - Create new booking (authenticated)
-PATCH /api/bookings/:id/cancel - Cancel booking (authenticated)
-Usage
-Creating a User Account
-Navigate to http://localhost:3000/signup
-Fill in your name, email, and password
-Click "Sign Up"
-You'll be automatically logged in and redirected to the properties page
-Browsing Properties
-Visit the home page or click "Properties" in the navigation
-Browse available properties
-Click on a property card to view details
-Making a Booking
-Ensure you're logged in
-Navigate to a property detail page
-Select check-in and check-out dates
-Choose number of guests
-Click "Reserve"
-You'll be redirected to "My Bookings" page
-Managing Bookings
-Click "My Bookings" in the navigation
-View all your bookings with status
-Cancel bookings if needed
-Seeding Sample Data
-To add sample properties for testing, you can create a seed script or use MongoDB Compass/CLI:
+```bash
+git clone <repo-url>
+cd staywise
+```
 
-javascript
-// Sample property data
-db.properties.insertMany([
-  {
-    title: "Luxury Beach Villa",
-    description: "Beautiful beachfront villa with stunning ocean views. Perfect for families and groups looking for a relaxing getaway.",
-    price: 15000,
-    location: "Goa, India",
-    images: ["https://images.unsplash.com/photo-1582268611958-ebfd161ef9cf"],
-    amenities: ["WiFi", "Pool", "Kitchen", "Air Conditioning", "Beach Access", "Parking"],
-    maxGuests: 8,
-    bedrooms: 4,
-    bathrooms: 3
-  },
-  {
-    title: "Mountain Retreat Cabin",
-    description: "Cozy cabin nestled in the mountains with breathtaking views. Ideal for nature lovers and adventure seekers.",
-    price: 8000,
-    location: "Manali, Himachal Pradesh",
-    images: ["https://images.unsplash.com/photo-1587061949409-02df41d5e562"],
-    amenities: ["WiFi", "Fireplace", "Kitchen", "Heating", "Mountain View", "Parking"],
-    maxGuests: 6,
-    bedrooms: 3,
-    bathrooms: 2
-  },
-  {
-    title: "Urban Modern Apartment",
-    description: "Stylish apartment in the heart of the city. Walking distance to restaurants, shops, and entertainment.",
-    price: 5000,
-    location: "Mumbai, Maharashtra",
-    images: ["https://images.unsplash.com/photo-1522708323590-d24dbb6b0267"],
-    amenities: ["WiFi", "Gym", "Air Conditioning", "Elevator", "City View", "Security"],
-    maxGuests: 4,
-    bedrooms: 2,
-    bathrooms: 2
-  }
-]);
-Creating an Admin User
-To create an admin user, you can either:
+2) Backend
 
-Via MongoDB directly:
-javascript
-   db.users.updateOne(
-     { email: "admin@staywise.com" },
-     { $set: { role: "admin" } }
-   );
-Via signup and manual update:
-Sign up normally through the app
-Use MongoDB Compass or CLI to update the user's role field to "admin"
-Environment Variables
-Backend (.env)
-Variable	Description	Default
-PORT	Server port	5000
-MONGODB_URI	MongoDB connection string	mongodb://localhost:27017/staywise
-JWT_SECRET	Secret key for JWT tokens	(required)
-NODE_ENV	Environment mode	development
-Frontend (.env.local)
-Variable	Description	Default
-NEXT_PUBLIC_API_URL	Backend API URL	http://localhost:5000
-Building for Production
-Backend
-bash
+```bash
 cd backend
-npm run build
-npm start
+npm install
+# create a .env with the variables below
+npm run dev
+```
+
+Default dev server: http://localhost:8000 (check `backend/.env` or `PORT`)
+
+3) Frontend
+
+```bash
+cd ../frontend
+npm install
+# create .env.local with NEXT_PUBLIC_API_URL=http://localhost:8000
+npm run dev
+```
+
+Default dev server: http://localhost:3000
+
+---
+
+## Environment variables
+
+Backend (`backend/.env`)
+
+- PORT — server port (default 8000)
+- MONGODB_URI — MongoDB connection string (default: mongodb://localhost:27017/staywise)
+- JWT_SECRET — secret for signing JWTs (required)
+- NODE_ENV — development/production
+
+Frontend (`frontend/.env.local`)
+
+- NEXT_PUBLIC_API_URL — e.g. http://localhost:8000
+
+---
+
+## API (important endpoints)
+
+Authentication
+
+- POST /api/auth/signup — sign up
+- POST /api/auth/login — login
+
+Properties
+
+- GET /api/properties — list properties (supports filters + pagination)
+  - Query params: q (text), bedrooms/minBeds/maxBeds, minPrice/maxPrice, page, limit
+  - Response: { data: Property[], total, page, pages }
+- GET /api/properties/:id — get property details
+- POST /api/properties — create (admin)
+- PUT /api/properties/:id — update (admin)
+- DELETE /api/properties/:id — delete (admin)
+
+Bookings
+
+- GET /api/bookings/property/:propertyId — get bookings for a property (used to compute unavailable dates)
+- GET /api/bookings/my-bookings — get current user's bookings (auth)
+- GET /api/bookings/all — admin only
+- POST /api/bookings — create booking (auth). Request body: { propertyId, checkIn, checkOut, guests }
+- PATCH /api/bookings/:id/cancel — cancel booking (auth)
+
+---
+
+## Pagination (Properties)
+
+The properties list supports server-side pagination. Example:
+
+```
+GET /api/properties?page=2&limit=12
+```
+
+Response shape:
+
+```json
+{
+  "data": [ /* array of Property objects */ ],
+  "total": 123,
+  "page": 2,
+  "pages": 11
+}
+```
+
+The frontend `Explore Properties` page uses `page` and `limit` state and has Prev/Next controls.
+
+---
+
+## Booking availability / Calendar behavior
+
+- The frontend fetches bookings for the selected property using `/api/bookings/property/:propertyId` and computes unavailable days (checkout day is exclusive).
+- The booking calendar (react-datepicker) disables unavailable days and prevents overlap.
+- Dates are normalized to start-of-day on the frontend to avoid timezone off-by-one issues.
+
+---
+
+## Common commands
+
+Backend
+
+```bash
+cd backend
+npm run dev       # development with ts-node
+npm run build     # compile to dist
+npm start         # start compiled dist
+```
+
 Frontend
-bash
+
+```bash
 cd frontend
+npm run dev
 npm run build
 npm start
-Project Features Checklist
-✅ Authentication & Authorization
-Email/password signup and login
-Password hashing with bcryptjs
-JWT-based authentication
-Protected routes
-✅ Properties
-List all properties
-View property details
-Admin CRUD operations
-✅ Bookings
-Create bookings with date validation
-View personal bookings
-Cancel bookings
-Admin view all bookings
-Availability checking
-✅ UI Pages
-Login/Signup pages
-Property list page
-Property detail page
+```
+
+---
+
+## Notes & Troubleshooting
+
+- If `Cannot GET /api/...` appears, ensure the backend is running on the URL set in `NEXT_PUBLIC_API_URL` and the correct port.
+- If you see timezone-related off-by-one dates in the calendar, ensure the frontend code uses start-of-day normalization (this project already does).
+- For production, set strong `JWT_SECRET`, use HTTPS, and configure a proper MongoDB production instance.
+
+---
+
+## Contributing
+
+Fork, branch, open a PR. Keep changes focused and add tests for new behavior when possible.
+
+---
+
+License: MIT
 My Bookings page
-Responsive design
-Code Quality
-TypeScript - Full type safety across frontend and backend
-Clean Code - Organized folder structure with separation of concerns
-Error Handling - Proper error handling and user feedback
-Validation - Input validation on both client and server
-Security - Password hashing, JWT authentication, protected routes
-Common Issues & Solutions
-MongoDB Connection Error
-Error: connect ECONNREFUSED 127.0.0.1:27017
-Solution: Ensure MongoDB is running on your system
-
-CORS Error
-Solution: Check that NEXT_PUBLIC_API_URL in frontend .env.local matches your backend URL
-
-Token Expired
-Solution: Login again to get a new JWT token (tokens expire after 7 days)
-
-Contributing
-Fork the repository
-Create a feature branch (git checkout -b feature/AmazingFeature)
-Commit your changes (git commit -m 'Add some AmazingFeature')
-Push to the branch (git push origin feature/AmazingFeature)
-Open a Pull Request
-License
-This project is licensed under the MIT License.
-
-Support
-For issues and questions, please open an issue on the GitHub repository.
-
-Built with ❤️ using Next.js, Express.js, and MongoDB
 

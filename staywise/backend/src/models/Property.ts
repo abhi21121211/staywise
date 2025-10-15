@@ -4,6 +4,7 @@ export interface IPropertyDocument extends Document {
   title: string;
   description: string;
   price: number;
+  type: string;
   location: string;
   images: string[];
   amenities: string[];
@@ -35,6 +36,11 @@ const PropertySchema = new Schema<IPropertyDocument>({
   images: [{
     type: String
   }],
+  type: {
+    type: String,
+    trim: true,
+    default: ''
+  },
   amenities: [{
     type: String
   }],
@@ -58,5 +64,8 @@ const PropertySchema = new Schema<IPropertyDocument>({
     default: Date.now
   }
 });
+
+// Add a text index for title and description for efficient text search
+PropertySchema.index({ title: 'text', description: 'text' });
 
 export default mongoose.model<IPropertyDocument>('Property', PropertySchema);

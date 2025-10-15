@@ -20,6 +20,20 @@ router.get('/my-bookings', authenticate, async (req: AuthRequest, res: Response)
   }
 });
 
+// Get bookings for a specific property (public)
+router.get('/property/:propertyId', async (req, res: Response) => {
+  try {
+    const { propertyId } = req.params;
+
+    const bookings = await Booking.find({ property: propertyId, status: { $ne: 'cancelled' } }).sort({ checkIn: 1 });
+
+    res.json(bookings);
+  } catch (error: any) {
+    console.error('Get bookings by property error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 // Get all bookings (admin only)
 router.get('/all', authenticate, authorize('admin'), async (req: AuthRequest, res: Response) => {
   try {
